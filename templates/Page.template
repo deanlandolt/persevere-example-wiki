@@ -2,7 +2,7 @@
 	<title>{{pageName}}</title> 
 	<link rel="stylesheet" href="/css/common.css" /> 
 	<link rel="stylesheet" href="/css/wikiContent.css" /> 
-	<script src="/lib/transporter/receiver.js"></script> 
+	<script src="/receiver.js"></script> 
 	<script src="/lib/monitor.js"></script>
 	<body>
 		<div id="headerContainer"><span class="pageName">{{pageName}}<span></div> 
