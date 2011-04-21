@@ -2,25 +2,30 @@
  * The starting point for Pintura running as a Jack app.
  */
 var pinturaApp;
-require("nodules").useLocal().ensure(["pintura/pintura", "app", "tunguska/jack-connector", "narwhal/narwhal/repl"], function(require){
+var File = require("file");
+// HACK temporarily push nodules location
+require.paths.unshift(File.resolve(File.cwd() + "/../nodules/lib"));
+var nodules = require("nodules");
+nodules.useLocal().ensure(["pintura/lib/pintura", "app", "tunguska/lib/jack-connector"], function(require){
 	require.reloadable(function(){
-		pinturaApp = require("pintura/pintura").app;
+		pinturaApp = require("pintura/lib/pintura").app;
 		require("app");
 	});
-	require("tunguska/jack-connector").observe("worker", pinturaApp.addConnection);
+	require("tunguska/lib/jack-connector").observe("worker", pinturaApp.addConnection);
 	// we start the REPL (the interactive JS console) because it is really helpful
-	if(require("jack/handler/simple-worker").options.firstWorker){
-		require("narwhal/narwhal/repl").repl(true);
-	}
+	//if(require("jack/handler/simple-worker").options.firstWorker){
+	//	require("narwhal/narwhal/repl").repl(true);
+	//}
 });
 
-var File = require("file"),
-	Transporter = require("jsgi/transporter").Transporter;
+// FIXME
+var Transporter = require("../transporter/lib/jsgi/transporter").Transporter;
 
-var perseverePath, 
-	Static = require("jack/static").Static,
-	Directory = require("jack/dir").Directory;
-	
+var perseverePath;
+var Cascade = require("jack/cascade").Cascade;
+var Static = require("jack/static").Static;
+var Directory = require("jack/dir").Directory; // FIXME
+
 var path = require.paths[0].match(/(.*?)[\/\\]packages[\/\\]/);
 if(path){
 	perseverePath = path[1] + "/packages/persevere/public";
@@ -30,25 +35,26 @@ if(path){
 // for better performance
 exports.app = exports.development = function(app, options){
 	// make the root url redirect to /Page/Root  
-	return require("./lib/jsgi/redirect-root").RedirectRoot(
-		require("jack/cascade").Cascade([
+	////return require("./lib/jsgi/redirect-root").RedirectRoot(
+		return Cascade([
 			// cascade from static to pintura REST handling
-/*		// this will provide module wrapping for the Dojo modules for the client
-		transporter.Transporter({
-			urlPrefix:"/js/",
-			paths:["../../persevere/public/js/"],
-			converter: transporter.Dojo
-		}),*/
-		// the main place for static files accessible from the web
-		Directory("public", Static(null, {urls:[""], root: "public"})),
-		Static(null, {urls:["/explorer"], root: perseverePath + "/explorer"}),
-		// this will provide access to the server side JS libraries from the client
-		Transporter({loader: require("nodules").forEngine("browser").useLocal().getModuleSource}),
-		
+		    // the main place for static files accessible from the web
+		    Directory("public", Static(null, {urls:[""], root: "public"})),
+		    Static(null, {urls:["/explorer"], root: perseverePath + "/explorer"}),
+		    // this will provide access to the server side JS libraries from the client
+		    Transporter({loader: nodules.forEngine("browser").useLocal().getModuleSource}),
+		    
 		 	// main Pintura handler 
 			function(request){
-				return pinturaApp(request);
+			    if (!pinturaApp) {
+			        return {
+			            status: 500,
+			            headers: {},
+			            body: ["Application is initializing..."]
+			        };
+			    }
+			    return pinturaApp(request);
 			}
 		])
-	);
+	////);
 };
